@@ -92,6 +92,8 @@ and mul e1 e2 =
   | Number n1, Div (Number n2, e2) | Div (Number n2, e2), Number n1 -> div (Number (n1 * n2)) e2
   | Div (Number 1, e1), e2 when e1 = e2  -> Number 1
   | e1, Div (Number 1, e2) when e1 = e2  -> Number 1
+  | Div (Number 1, e1), e2 -> div e2 e1
+  | e1, Div (Number 1, e2) -> div e1 e2
   | Var (coeff1,s1,pow1), Var (coeff2, s2, pow2) when s1 = s2 -> cpvar (coeff1 * coeff2) s1 (pow1 + pow2)
   | _, _ -> if e1 = e2 then Pow(e1, Number 2) else Mul(e1, e2)
 
@@ -125,7 +127,7 @@ let derivateFunc name expr =
   | "exp" -> Func ("exp", expr)
   | "ln" -> div (Number 1) expr
   | "sqrt" -> div (Number 1) (mul (Number 2) (Func ("sqrt", expr)))
-  | _ -> failwith "Function not supported"
+  | _ -> failwith ("Unknown function " ^ name)
 
 
 let rec derivate expression variable = match expression with

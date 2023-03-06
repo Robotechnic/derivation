@@ -11,6 +11,7 @@ type token =
   | DIVIDE of pos
   | POWER of pos
   | VARIABLE of pos * string
+  | FUNCTION of pos * string
   | NUMBER of pos * int
 
 let print_token = function
@@ -23,6 +24,7 @@ let print_token = function
   | POWER (pos) -> Printf.printf "('^', %d)" pos
   | NUMBER (pos, n) -> Printf.printf "('%d', %d)" n pos
   | VARIABLE (pos, v) -> Printf.printf "('%s', %d)" v pos
+  | FUNCTION (pos, f) -> Printf.printf "('%s', %d)" f pos
 
 let print_tokens tokens = 
   let rec aux = function
@@ -30,11 +32,19 @@ let print_tokens tokens =
     | t::ts -> let () = print_token t in aux ts
   in aux tokens
 
-let rec parseNumber line j acc =
+let rec parseString line j acc min max =
   if j >= String.length line then (acc, j)
   else match String.get line j with
-    | '0'..'9' as c -> parseNumber line (j+1) ((String.make 1 c)::acc)
+    | c when c >= min && c <= max -> parseString line (j+1) ((String.make 1 c)::acc) min max
     | _ -> (acc, j)
+
+let parseNumber line j acc = parseString line j acc '0' '9'
+
+let parseLiteral line j acc = 
+  let (lstring, i) = parseString line j acc 'a' 'z' in
+  let string = String.concat "" (List.rev lstring) in
+  if (String.length string) = 1 then (VARIABLE(j, string), i)
+  else FUNCTION(j, string), i
 
 let displayError error i line =
   let spaces = if i = -1 then String.length line else i in
@@ -56,7 +66,7 @@ let tokenise line =
         let (digits, j) = parseNumber line i [] in
         let number = int_of_string (String.concat "" (List.rev digits)) in
         aux j (NUMBER (i, number) :: acc)
-      | 'a'..'z' -> aux (i + 1) (VARIABLE (i, String.make 1 (String.get line i)) :: acc)
+      | 'a'..'z' -> let (token, j) = parseLiteral line i [] in aux j (token :: acc)
       | _ as c -> raise (SyntaxError (i, "Unexpected character : " ^ (String.make 1 c)))
   in try 
     List.rev (aux 0 [])
@@ -86,6 +96,12 @@ let rec factor = function
   | RPAREN(_)::t -> exp, t
   | _ -> raise (SyntaxError (p, "Expected a ')'")))
 | DIVIDE(p)::_ | TIMES(p)::_ | POWER(p)::_ | RPAREN(p)::_ -> raise (SyntaxError (p, "Unexpected token"))
+| FUNCTION(p, f)::t -> match t with
+    | LPAREN(_)::t -> let (exp, rest) = expr None 0 t in
+      (match rest with
+      | RPAREN(_)::t -> (func f exp, t)
+      | _ -> raise (SyntaxError (p, "Expected a ')'")))
+    | _ -> raise (SyntaxError (p + String.length f, "Expected a '('"))
 
 and expr acc level = function
 | [] -> raise (SyntaxError (-1, "Expected an expression but got nothing"))
@@ -117,6 +133,7 @@ let parse line =
       | PLUS(p) | MINUS(p) | TIMES(p) | DIVIDE(p) | POWER(p) -> raise (SyntaxError (p, "Unexpected operator"))
       | NUMBER(p, _) -> raise (SyntaxError (p, "Unexpected number"))
       | VARIABLE(p, _) -> raise (SyntaxError (p, "Unexpected variable"))
+      | FUNCTION(p, _) -> raise (SyntaxError (p, "Unexpected function name"))
   with SyntaxError(i, error) ->
     displayError error i line
  
