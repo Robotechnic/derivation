@@ -1,5 +1,5 @@
 type expr =
-  | Var    of int*string*int
+  | Var    of int * string * int
   | Number of int
   | Add    of expr * expr
   | Sub    of expr * expr
@@ -8,8 +8,14 @@ type expr =
   | Pow    of expr * expr
   | Func   of string * expr
 
-let var name = Var(1,name,1)
-let cpvar coeff name pow = if coeff = 0 then Number(0) else if pow = 0 then Number(coeff) else Var(coeff, name, pow)
+let var name = Var(1, name, 1)
+let cpvar coeff name pow = 
+  if coeff = 0 then
+    Number(0)
+  else if pow = 0 then 
+    Number(coeff) 
+  else 
+    Var(coeff, name, pow)
 let number n = Number n
 
 let func name expr = Func(name, expr)
@@ -48,12 +54,25 @@ let parentheses parent child str =
 let print_expression e =
   let rec print e =
     match e with
-    | Var (coeff, name, power) -> 
-      (if coeff = 1 then "" else if coeff = -1 then "-" else (string_of_int coeff)) ^ 
-      name ^
-      (if power = 1 then "" else "^" ^ (string_of_int power))
+    | Var (coeff, name, power) ->
+      Printf.sprintf "%s%s%s"
+      (
+        if coeff = 1 then 
+          "" 
+        else if coeff = -1 then 
+          "-" 
+        else 
+          string_of_int coeff
+      )
+      name
+      (
+        if power = 1 then 
+          ""  
+        else 
+          "^" ^ (string_of_int power)
+      )
     | Number n -> string_of_int n
-    | Func (name, body) -> name ^ "(" ^ (print body) ^ ")"
+    | Func (name, body) -> Printf.sprintf "%s(%s)" name (print body)
     | Add (e1, e2) | Sub (e1, e2) | Mul (e1, e2) | Div (e1, e2) | Pow (e1, e2) ->
       Printf.sprintf "%s %c %s" (parentheses e e1 (print e1)) (charOfOp e) (parentheses e e2 (print e2))
   in
@@ -84,17 +103,21 @@ let rec div e1 e2 =
   | _, _ -> if e1 = e2 then Number 1 else Div(e1, e2)
 and mul e1 e2 =
   match e1, e2 with
-  | Number 0, _ | _, Number 0 -> Number 0
+  | Number 0, _ 
+  | _, Number 0 -> Number 0
   | Number 1, _ -> e2
   | _, Number 1 -> e1
   | Number n1, Number n2 -> Number (n1 * n2)
-  | Number n1, Var (coeff2, s2, pow2) | Var (coeff2, s2, pow2), Number n1 -> cpvar (coeff2 * n1) s2 pow2
-  | Number n1, Div (Number n2, e2) | Div (Number n2, e2), Number n1 -> div (Number (n1 * n2)) e2
+  | Number n1, Var (coeff2, s2, pow2) 
+  | Var (coeff2, s2, pow2), Number n1 -> cpvar (coeff2 * n1) s2 pow2
+  | Number n1, Div (Number n2, e2)
+  | Div (Number n2, e2), Number n1 -> div (Number (n1 * n2)) e2
   | Div (Number 1, e1), e2 when e1 = e2  -> Number 1
   | e1, Div (Number 1, e2) when e1 = e2  -> Number 1
   | Div (Number 1, e1), e2 -> div e2 e1
   | e1, Div (Number 1, e2) -> div e1 e2
-  | Var (coeff1,s1,pow1), Var (coeff2, s2, pow2) when s1 = s2 -> cpvar (coeff1 * coeff2) s1 (pow1 + pow2)
+  | Var (coeff1,s1,pow1), 
+    Var (coeff2, s2, pow2) when s1 = s2 -> cpvar (coeff1 * coeff2) s1 (pow1 + pow2)
   | _, _ -> if e1 = e2 then Pow(e1, Number 2) else Mul(e1, e2)
 
 let sub e1 e2 =
@@ -131,7 +154,11 @@ let derivateFunc name expr =
 
 
 let rec derivate expression variable = match expression with
-  | Var (coeff, name, power) -> if name = variable then cpvar (coeff * power) name (power - 1) else Number 0
+  | Var (coeff, name, power) -> 
+    if name = variable then 
+      cpvar (coeff * power) name (power - 1) 
+    else
+      Number 0
   | Number _ -> Number 0
   | Add (e1, e2) -> add (derivate e1 variable) (derivate e2 variable)
   | Sub (e1, e2) -> sub (derivate e1 variable) (derivate e2 variable)

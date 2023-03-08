@@ -35,7 +35,8 @@ let print_tokens tokens =
 let rec parseString line j acc min max =
   if j >= String.length line then (acc, j)
   else match String.get line j with
-    | c when c >= min && c <= max -> parseString line (j+1) ((String.make 1 c)::acc) min max
+    | c when c >= min && c <= max -> 
+      parseString line (j+1) ((String.make 1 c)::acc) min max
     | _ -> (acc, j)
 
 let parseNumber line j acc = parseString line j acc '0' '9'
@@ -48,20 +49,21 @@ let parseLiteral line j acc =
 
 let displayError error i line =
   let spaces = if i = -1 then String.length line else i in
-  let () = Printf.fprintf stderr "\n%s\n%s^\nError : %s (at char %d)\n" line (String.make spaces ' ') error i in exit 1
+  let () = Printf.fprintf stderr "\n%s\n%s^\nError : %s (at char %d)\n" line (String.make spaces ' ') error i 
+  in exit 1
 
 let tokenise line =
   let rec aux i acc =
     if i >= String.length line then acc
     else match String.get line i  with
-      | '(' -> aux (i+1) (LPAREN i :: acc)
-      | ')' -> aux (i+1) (RPAREN i :: acc)
-      | '+' -> aux (i+1) (PLUS i :: acc)
-      | '-' -> aux (i+1) (MINUS i :: acc)
-      | '*' -> aux (i+1) (TIMES i :: acc)
-      | '/' -> aux (i+1) (DIVIDE i :: acc)
-      | '^' -> aux (i+1) (POWER i :: acc)
-      | ' ' -> aux (i+1) acc
+      | '(' -> aux (i + 1) (LPAREN i :: acc)
+      | ')' -> aux (i + 1) (RPAREN i :: acc)
+      | '+' -> aux (i + 1) (PLUS i :: acc)
+      | '-' -> aux (i + 1) (MINUS i :: acc)
+      | '*' -> aux (i + 1) (TIMES i :: acc)
+      | '/' -> aux (i + 1) (DIVIDE i :: acc)
+      | '^' -> aux (i + 1) (POWER i :: acc)
+      | ' ' -> aux (i + 1) acc
       | '0'..'9' ->
         let (digits, j) = parseNumber line i [] in
         let number = int_of_string (String.concat "" (List.rev digits)) in
@@ -97,7 +99,7 @@ let rec factor = function
   | _ -> raise (SyntaxError (p, "Expected a ')'")))
 | DIVIDE(p)::_ | TIMES(p)::_ | POWER(p)::_ | RPAREN(p)::_ -> raise (SyntaxError (p, "Unexpected token"))
 | FUNCTION(p, f)::t -> match t with
-    | LPAREN(_)::t -> let (exp, rest) = expr None 0 t in
+    | LPAREN(p)::t -> let (exp, rest) = expr None 0 t in
       (match rest with
       | RPAREN(_)::t -> (func f exp, t)
       | _ -> raise (SyntaxError (p, "Expected a ')'")))
@@ -111,14 +113,24 @@ and expr acc level = function
     let (leftExpr, rest) = if acc = None then (expr acc (level + 1) t) else (Option.get acc), t 
   in
   match rest with
-      | [] -> leftExpr, []
-      | PLUS(_)::t when level = 0 -> let (rightExpr, rightRest) = expr None 0 t in   (add leftExpr rightExpr, rightRest)
-      | MINUS(_)::t when level = 0 -> let (rightExpr, rightRest) = expr None 0 t in  (sub leftExpr rightExpr, rightRest)
-      | TIMES(_)::t when level = 1 -> let (rightExpr, rightRest) = expr None 1 t in  (mul leftExpr rightExpr, rightRest)
-      | DIVIDE(_)::t when level = 1 -> let (rightExpr, rightRest) = expr None 1 t in (div leftExpr rightExpr, rightRest)
-      | POWER(_)::t when level = 2 -> let (rightExpr, rightRest) = expr None 2 t in  (pow leftExpr rightExpr, rightRest)
-      | LPAREN(p)::_ -> raise (SyntaxError (p, "Unexpected parenthesis, expected an operator"))
-      | _ -> leftExpr, rest
+  | [] -> leftExpr, []
+  | PLUS(_)::t when level = 0 -> 
+    let (rightExpr, rightRest) = expr None 0 t 
+    in  (add leftExpr rightExpr, rightRest)
+  | MINUS(_)::t when level = 0 ->
+    let (rightExpr, rightRest) = expr None 0 t 
+    in  (sub leftExpr rightExpr, rightRest)
+  | TIMES(_)::t when level = 1 -> 
+    let (rightExpr, rightRest) = expr None 1 t
+    in  (mul leftExpr rightExpr, rightRest)
+  | DIVIDE(_)::t when level = 1 ->
+    let (rightExpr, rightRest) = expr None 1 t
+    in (div leftExpr rightExpr, rightRest)
+  | POWER(_)::t when level = 2 ->
+    let (rightExpr, rightRest) = expr None 2 t 
+    in  (pow leftExpr rightExpr, rightRest)
+  | LPAREN(p)::_ -> raise (SyntaxError (p, "Unexpected parenthesis, expected an operator"))
+  | _ -> leftExpr, rest
 
 let parse line =
   let tokens = tokenise line in
@@ -130,7 +142,11 @@ let parse line =
       match h with
       | LPAREN(p) -> raise (SyntaxError (p, "Expected a ')'"))
       | RPAREN(p) -> raise (SyntaxError (p, "Unexpected ')'"))
-      | PLUS(p) | MINUS(p) | TIMES(p) | DIVIDE(p) | POWER(p) -> raise (SyntaxError (p, "Unexpected operator"))
+      | PLUS(p) 
+      | MINUS(p) 
+      | TIMES(p) 
+      | DIVIDE(p) 
+      | POWER(p) -> raise (SyntaxError (p, "Unexpected operator"))
       | NUMBER(p, _) -> raise (SyntaxError (p, "Unexpected number"))
       | VARIABLE(p, _) -> raise (SyntaxError (p, "Unexpected variable"))
       | FUNCTION(p, _) -> raise (SyntaxError (p, "Unexpected function name"))
