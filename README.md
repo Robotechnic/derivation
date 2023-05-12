@@ -30,3 +30,20 @@ $ derivation -v x -e "x^2 + 2*x + 1" | derivation -v x
 $ derivation -v x -e "(x*y)^2 + 2 * x * y + 1" | derivation -v y
 2 * x * y + 2y * x + 2
 ```
+
+## Functions
+
+The program can derivate the following functions:
+
+- `sin`
+- `cos`
+- `tan`
+- `exp`
+- `ln`
+- `sqrt`
+- `asin`
+- `acos`
+- `atan`
+- `log10`
+- `log2`
+- `abs`
