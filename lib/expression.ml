@@ -159,6 +159,8 @@ let derivateFunc name expr =
   | "exp" -> Func ("exp", expr)
   | "ln" -> div (Number 1) expr
   | "sqrt" -> div (Number 1) (mul (Number 2) (Func ("sqrt", expr)))
+  | "log10" -> div (Number 1) (mul expr (Func ("ln", Number 10)))
+  | "log2" -> div (Number 1) (mul expr (Func ("ln", Number 2)))
   | _ -> failwith ("Unknown function " ^ name)
 
 let rec derivate expression variable =
