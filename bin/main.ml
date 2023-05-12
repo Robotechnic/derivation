@@ -12,14 +12,16 @@ let specList =
   ]
 
 let stdinDerivate () =
-  while true do
-    try
+  try
+    while true do
       let line = read_line () in
       let expression = parse line in
-      print_expression (derivate expression !variable);
+      if is_empty expression
+      then ()
+      else print_expression (derivate expression !variable);
       print_newline ()
-    with End_of_file -> ()
-  done
+    done
+  with End_of_file -> ()
 
 let checkVariable () =
   if !variable = ""

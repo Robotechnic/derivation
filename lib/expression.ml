@@ -7,6 +7,7 @@ type expr =
   | Div of expr * expr
   | Pow of expr * expr
   | Func of string * expr
+  | Empty
 
 let var name = Var (1, name, 1)
 
@@ -26,6 +27,7 @@ let priority = function
   | Mul _ | Div _ -> 2
   | Pow _ -> 3
   | Func _ -> 4
+  | Empty -> assert false
 
 let charOfOp = function
   | Add _ -> '+'
@@ -69,6 +71,7 @@ let print_expression e =
           (parentheses e e1 (print e1))
           (charOfOp e)
           (parentheses e e2 (print e2))
+    | Empty -> ""
   in
   print_string (print e)
 
@@ -134,6 +137,12 @@ let pow e1 e2 =
   | _, _ -> Pow (e1, e2)
 
 let neg e = mul (Number (-1)) e
+let empty () = Empty
+
+let is_empty e =
+  match e with
+  | Empty -> true
+  | _ -> false
 
 let derivateFunc name expr =
   match name with
@@ -176,3 +185,4 @@ let rec derivate expression variable =
            (mul (derivate e2 variable) (Func ("ln", e1)))
            (mul (div (derivate e1 variable) e1) e2))
         (pow e1 e2)
+  | Empty -> Empty

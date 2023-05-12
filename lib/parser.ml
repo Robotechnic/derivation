@@ -56,12 +56,12 @@ let parseLiteral line j acc =
   else (FUNCTION (j, string), i)
 
 let displayError error i line =
-  let spaces = if i = -1 then String.length line else i in
-  let () =
+  if String.length line = 0
+  then
+    let spaces = if i = -1 then String.length line else i in
     Printf.fprintf stderr "\n%s\n%s^\nError : %s (at char %d)\n" line
       (String.make spaces ' ') error i
-  in
-  exit 1
+  else Printf.fprintf stderr "Error : %s\n" error
 
 let tokenise line =
   let rec aux i acc =
@@ -88,11 +88,21 @@ let tokenise line =
           raise (SyntaxError (i, "Unexpected character : " ^ String.make 1 c))
   in
   try List.rev (aux 0 [])
-  with SyntaxError (i, error) -> displayError error i line
+  with SyntaxError (i, error) ->
+    let () = displayError error i line in
+    []
 
 let rec factor = function
   | [] -> raise (SyntaxError (-1, "Expected an expression but got nothing"))
-  | NUMBER (_, n) :: t -> (number n, t)
+  | NUMBER (_, n) :: t -> (
+      match t with
+      | VARIABLE _ :: _ | FUNCTION _ :: _ ->
+          let factor, rest = factor t in
+          (mul (number n) factor, rest)
+      | LPAREN _ :: _ ->
+          let expression, rest = expr None 0 t in
+          (mul (number n) expression, rest)
+      | _ -> (number n, t))
   | VARIABLE (_, v) :: t -> (var v, t)
   | MINUS p :: t -> (
       try
@@ -157,20 +167,32 @@ and expr acc level = function
               (SyntaxError (p, "Unexpected parenthesis, expected an operator"))
         | _ -> (leftExpr, rest))
 
+let is_list_empty = function
+  | [] -> true
+  | _ -> false
+
 let parse line =
   let tokens = tokenise line in
-  try
-    let exp, rest = expr None 0 tokens in
-    match rest with
-    | [] -> exp
-    | h :: _ -> (
-        match h with
-        | LPAREN p -> raise (SyntaxError (p, "Expected a ')'"))
-        | RPAREN p -> raise (SyntaxError (p, "Unexpected ')'"))
-        | PLUS p | MINUS p | TIMES p | DIVIDE p | POWER p ->
-            raise (SyntaxError (p, "Unexpected operator"))
-        | NUMBER (p, _) -> raise (SyntaxError (p, "Unexpected number"))
-        | VARIABLE (p, _) -> raise (SyntaxError (p, "Unexpected variable"))
-        | FUNCTION (p, _) -> raise (SyntaxError (p, "Unexpected function name"))
-        )
-  with SyntaxError (i, error) -> displayError error i line
+  if is_list_empty tokens
+  then (
+    flush stderr;
+    empty ())
+  else
+    try
+      let exp, rest = expr None 0 tokens in
+      match rest with
+      | [] -> exp
+      | h :: _ -> (
+          match h with
+          | LPAREN p -> raise (SyntaxError (p, "Expected a ')'"))
+          | RPAREN p -> raise (SyntaxError (p, "Unexpected ')'"))
+          | PLUS p | MINUS p | TIMES p | DIVIDE p | POWER p ->
+              raise (SyntaxError (p, "Unexpected operator"))
+          | NUMBER (p, _) -> raise (SyntaxError (p, "Unexpected number"))
+          | VARIABLE (p, _) -> raise (SyntaxError (p, "Unexpected variable"))
+          | FUNCTION (p, _) ->
+              raise (SyntaxError (p, "Unexpected function name")))
+    with SyntaxError (i, error) ->
+      displayError error i line;
+      flush stderr;
+      empty ()

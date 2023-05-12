@@ -78,6 +78,17 @@ val pow : expr -> expr -> expr
     @param [2] expr : second expression to power it need to be a number
     @return expr : first expression powered by the second expression *)
 
+val empty : unit -> expr
+(** Instanciate a new empty expression
+
+    @return expr : the new empty expression *)
+
+val is_empty : expr -> bool
+(** Check if the given expression is empty
+
+    @param [1] expr : expression to check
+    @return bool : true if the expression is empty, false otherwise *)
+
 val derivate : expr -> string -> expr
 (** Compute the derivate of the given expression with respect to the given
     variable
