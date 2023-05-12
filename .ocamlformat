@@ -1,0 +1,9 @@
+profile = default
+version = 0.21.0
+break-separators = after
+break-cases = fit-or-vertical
+if-then-else = keyword-first
+line-endings = lf
+m = 80
+parse-docstrings
+type-decl = sparse
